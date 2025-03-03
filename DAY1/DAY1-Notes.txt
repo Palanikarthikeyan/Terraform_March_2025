@@ -1,0 +1,731 @@
+
+Good Morning All
+
+Welcome to Terraform Training 
+           -----------
+This is PalaniKarthikeyan (Call: Karthik) - Trainer.
+        ---------------------------------
+we will start session @9:30 AM IST
+		      -------------
+############################################################################
+Terraform - IaC
+
+Initial Infrastructure ----> Manage Infra ---> Initialize Application -> Manage the Appl
+----------------------------------------------- _________________________________
+							  Ansible
+		 Terraform 	................. ......
+ ===========================================
+
+ Provisioning Tools
+ ---------------------
+ terraform - aws,azure,oci,etc.,
+
+ CloudFormationTemplate(CFT) - aws only 
+ azure resource manager - azure only
+ openstack - heatmap template - openstack only
+ 
+ terraform - aws,azure,oci,etc.,
+ ---------------------------------- 
+ |
+ providers 
+ ..........
+
+ [mysystem] ---TF---TFcore----------[cloud] ->[infra]
+		    =========?==========
+			(providers+plugins) ->[GitHub]
+			(providers+plugins) ->[oci]
+			(providers+plugins) ->[aws]
+			  ....		    ->[resource]
+			   ------>RPC - APIcalls
+
+		TFCore --->API---Cloud
+			  #  keys ; token 
+			-----<----- # auth 
+			    (ack)
+			--------->-------//create a resource
+					//resource is created
+then the state file will generated
+	------------
+	  |->json format - blue print of infrastructure
+
+TF using the concept is called API as code internally irrespective of
+			    -----------------
+cloud providers.
+
+HCL -> cloudspecific_API()
+	provider+plugins //RPC - internal
+=====================================================================================
+
+terraform configuration file (or) terraform script (or) terraform template- filename.tf			
+
+root@host~]# mkdir mydir
+	     cd mydir <--- terraform project directory
+	     vi p1.tf <--- template <or> config file <or> script
+		...
+	     :wq
+
+---------------------------------------------------------------------------------
+TF Activity
+-----------
+step 1: write HCL code (or) template -> filename.tf - oci_compute,vcn,lb.. 
+
+step 2: download the cloud providers => terraform init 
+|
+step 3: preview the infra as code - planning => terraform plan
+|
+step 4: apply the preview - real action/execution - then only state file will generate.
+|	\__  => terraform apply
+
+step 5: destroy the infra 
+	|__ => terraform destroy
+---------------------------------------------------------------------------------
+HCL 
+----
+ |->declarative code block
+
+Fundamental Blocks		Variable Blocks		Calling/Reference Blocks
+-------------------            ================		------------------------
+1. terraform block	       input variable		data source block
+2. provider block	       output variable		module block
+3. resource block	       local variable
+-------------------------------------------------------------------------------
+ blockName blocklabel logicalName {
+	Key1 = value
+	Key2 = value
+	...
+	KeyN = value 
+ }
+-----------------------------------
+
+terraform {
+  required_providers {
+    oci = {
+      source = "oracle/oci"
+      version = "6.28.0"
+    }
+  }
+}
+
+provider "oci" {
+  # Configuration options
+}
+-------------------------------------------------------------------------------
+	
+resource compute mycompute {
+^^^^^^^^ ^^^^^^^ ^^^^^^^^
+|         |         |________ this is user defined
+|         |_cloudprovider
+TF
+ 
+  instance = "OL8"
+  ^^^^^^^^
+   pre-defined keys provided by Cloud provider
+  id = <resourceID>
+  ^^
+   |__ pre-defined keys provided by TF
+
+}	
+
+resource compute mycompute {
+	instance = "OL8"
+}				   								
+-----------------------------------//1
+variable myvar{
+  default = "OL7"  -------->----------
+}				     |
+|				     |
+|				     |
+resource compute mycompute {	     |
+	instance = var.myvar  ---<---
+
+}
+-------------------------------------//2
+Vs
+resource compute mycompute {	     
+	instance = data.mycompute  <== from data block
+}
+Vs
+data compute mycompute{
+	instance = "OL6"
+}	
+---------------------------------------//3
+
+
+
+
+
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.89.0"
+    }
+  }
+}
+
+provider "aws" {
+  # Configuration options
+}
+terraform {
+  required_providers {
+    oci = {
+      source = "oracle/oci"
+      version = "6.28.0"
+    }
+  }
+}
+
+provider "oci" {
+  # Configuration options
+}
+
+
+resource block syntax:-
+--------------------------
+resource resourceName logicalName {
+-------- <==========> ^^^^^^^^^^^^
+|_by TF     |_by cloud       |__ by user (user defined Name)
+	Key1 = value
+	Key2 = value
+}
+###################################################################################
+resource resourceName label {
+  
+  Key = Value # ..... single comment 
+  /* ....
+     ....
+     .... */ multilinecomment
+}
+########################################
+TF life cycle
+ - write the code ->init ->plan ->apply ->destroy
+			
+===========================================================================
+TFcore - created by go language
+
+Infracode ->HCL ->.tf
+======================//declarative 
+
+TF ->cloud (own provider)
+		 |___ api() //calls
+=========================================================================
+Download terraform from https://www.terraform.io/downloads.html
+			-----------------------------------------
+
+Download ->unzip 
+windows => terraform.exe 
+  |__ set path = ....
+
+Linux like os => terraform binary file -> mv /bin (or) /usr/bin
+
+To test terraform version
+-----------------------------
+terraform --version {enter}
+
+
+file: Install_TF_OL.sh
+--------------------------
+VERSION="1.11.0"
+wget https://releases.hashicorp.com/terraform/$VERSION/terraform_$VERSION_linux_amd64.zip
+tar -xvzf terraform_$VERSION_linux_amd64.zip
+cd terraform_$VERSION_linux_amd64.zip
+mv terraform /bin
+-------------------------
+##########################################################################
+
+Resource: local_file 
+create a new file (file - infrastructure)
+------------------------------------------
+mkdir TF-Activity/
+	|
+	mkdir project1/
+		|____p1.tf 
+
+	mkdir project2/
+
+	mkdir project3/
+
+terraform portal
+|
+terraform registry ->local_file <=== see the provider name is HashiCorp
+		     |
+		see the provider details
+		# look at the block (terraform,provider)
+		# copy the provider details and paste it to p1.tf file
+
+Go to terraform local_file => see the resource block
+			   => see the resource block parameters(or)options
+			   => check - what are parameters are required 
+		# copy the resource block and paste it to p1.tf file
+		
+In p1.tf file - edit
+terraform {
+  required_providers {
+    local = {
+      source = "hashicorp/local"
+      version = "2.5.2"
+    }
+  }
+}
+
+provider "local" {
+  # Configuration options
+}
+
+resource "local_file" "myfile" {
+  content  = "My sample data"
+  filename = "D:\\t1.log"
+}					     
+------------------------------------------
+See the current project directory => p1.tf only 
+
+download plugins => terraform init {enter}
+
+dir/ls command - see the .terrform exists
+			 ---------
+still t1.log file is not created ( infra is not ready)
+
+terraform plan {enter}
+
+terraform apply {Enter}
+... yes
+dir/ls command - see the state file is created
+			 ------------
+# now t1.log file is created 
+
+
+#####################################################################
+
+ D1/
+   |___ p1.tf
+   
+   terraform init 
+
+ D1/
+   |______p1.tf
+   |______.terraform/
+
+   terraform plan
+   |
+   1st check - any state file is exists ->if exists ->compare your state file with an existing infrastructure
+							+ ~ -
+   terraform apply
+   yes 
+   |
+   state file <== 
+   |
+  if state file is not exists ->Generate statefile
+  if already exists => overwrite statefile content 
+---------------------------------------------------------------------------------
+Task:
+------
+destroy the existing resource (t1.log)
+|
+create new resource
+	- content=
+	- filename
+	- permission = "0644"
+|
+create a new resource
+|
+|-->plan
+|-->apply
+    |
+terraform show # read the state file and display state file info.
+----------------
+#####################################################################
+
+ D1/
+  |___ p1.tf				p2.tf
+	|->resource local_file		 |-->resource local_file
+			|->D:r1.log			\->D:r2.log
+
+  |___ p3.tf				p4.tf
+	|->resource local_file		------
+			|->E:emp.csv	  |-> resource gitHub{}
+
+terraform plan  Vs terraform plan p3.tf
+		   
+terraform apply Vs terraform plan p3.tf -out result1
+		   terraform apply result1
+	 
+
+D:\TF-Project\D1\D2>terraform plan -out result1
+D:\TF-Project\D1\D2>terraform apply result1
+local_file.myfile: Creating...
+local_file.myfile: Creation complete after 0s [id=3686f9e22395392f4c58161cc98659bd25219b8a]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+#############################################################################
+declarative style 
+ |->we can write any order
+    
+   resource local_file "myfile"{
+	...
+   }
+   provider "local"{
+   }
+   terraform{
+	..
+   }
+  ---------------------
+
+ |->we can split each block independent tf file
+    
+   |->filename is user defined 
+   
+   In generally ->provider details => provider.tf
+                  resource block   => main.tf
+		  variable block   => vars.tf
+		  outputblock      => output.tf
+					..
+
+
+###############################################################################
+variable block
+---------------
+ - like a variable in programming
+	  --------
+	   |->label (or) placeholder - holding the value
+ Syntax:
+ ---------
+ variable "user-defined-label" {
+	default = "Value"
+	^^^^^^^
+	predefined key
+}
+
+
+Vs 
+resource block 
+--------------
+resource "<resourceName>" "logicalName" {
+	var.<variableName>
+}
+
+
+variable "demo" {
+  default = 15
+}
+resource "resourceName" "logicalName" {
+	K1 = var.demo
+}
+---------------------------------------------------------------
+resource "local_file" fname {
+	content = var.<variableName>
+	filename = var.<variableName>
+}
+
+Note: 
+we can place block attributes any order
+=======================================================================
+D:\TF-Project\variable-demo>powershell cat variable.tf
+variable myvar1 {
+   default = "This is sample data from TF-vars"
+}
+
+variable myvar2 {
+   default = "D:\\t3.log"
+}
+
+D:\TF-Project\variable-demo>powershell cat main.tf
+resource "local_file" "myfile" {
+  content  = var.myvar1
+  filename = var.myvar2
+}
+
+D:\TF-Project\variable-demo>
+
+D:\TF-Project\variable-demo>powershell cat provider.tf
+terraform {
+  required_providers {
+    local = {
+      source = "hashicorp/local"
+      version = "2.5.2"
+    }
+  }
+}
+
+provider "local" {
+  # Configuration options
+}
+
+D:\TF-Project\variable-demo>
+####################################################################
+
+variable "variableName" {
+	description = ""
+	type = <datatype>
+	default = <value>
+}
+var.variableName
+
+output block
+-------------
+output "output_name" {
+	value = <Value>
+}
+
+ p1.tf -> [ action - create resource ] 
+ see the statefile
+  <or>
+ Goto cloud web ->see the TF action 
+ ------------------------------// 
+ |
+we can use output block
+	- display attributes to monitor
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+In general programming
+
+myvar1 = 120   <== initialization 	- variable block
+print(myvar1)  <== display to console   - output block
+
+variable myvar1{
+  default = 120
+}
+output display{
+	value = var.myvar1
+}
+---------------------------------
+
+resource local_file fname {
+   content= "Hello"
+   filename = "D:\\t1.log"
+}
+output display{
+   #value = <resourceName>.<logicalName>.<KeyAttribute>
+   value = local_file.fname.content
+}		
+------------------------------------------------------------------------
+Tasks:
+---------
+Write TF script 
+ - use local_file resource  -> filename,content
+ - use variable block
+	- filename
+	- content
+ - use output block
+	- display file content  - map from variable block
+ - use output block
+	- display resource ID - map from resource block
+-------------------------------------------------------
+
+output display1{
+ value = "File name is:${var.fname} Content ${var.msg} ID:${local_file.myfile.id}"
+}
+---------------------------------------------------------
+jinja2 template //
+
+####################################################################################
+
+D:\TF-Project\variable-demo\D1>powershell cat variable.tf
+variable myvar1 {
+        default = "This is test message"
+}
+variable myvar2 {
+        default = "D:\\t4.log"
+}
+
+D:\TF-Project\variable-demo\D1>powershell cat main.tf
+resource "local_file" "myfile" {
+        content=var.myvar1
+        filename = var.myvar2
+}
+
+D:\TF-Project\variable-demo\D1>powershell cat output.tf
+output display1 {
+        value = var.myvar1
+}
+output display2 {
+        value = local_file.myfile.id
+}
+D:\TF-Project\variable-demo\D1>powershell cat provider.tf
+terraform {
+  required_providers {
+    local = {
+      source = "hashicorp/local"
+      version = "2.5.2"
+    }
+  }
+}
+
+provider "local" {
+  # Configuration options
+}
+
+D:\TF-Project\variable-demo\D1>
+####################################################################################
+
+<blockName>
+terraform
+provider  <providerName>
+
+resource  <resourceName> <userdefined-LogicalName>
+	  ^^^^^^^^^^^^^^^^^
+	   |__ pre-defined block keyword - resource(cloud)provider
+variable  <userdefined-Variable-Name>
+
+output    <userdefined-Outputblock-Name>
+
+local
+
+data	  <datasourceName>
+module	  ^^^^^^^^^^^^^^^^^
+^^^^^^^			|__ pre-defined block keyword - resource(cloud)provider
+|
+predefined block name  - defined by Terraform Hashicorp
+
+
+variable "fname" {
+	default = "/var/log/test.log"
+}
+variable "msg"{
+	default = "This is test message from TF script\n"
+}
+variable "perm"{
+	default = "0754"
+}
+
+# fname,msg,perm - user defined logical Name 
+# -----------------------------------------------------
+###################################################################################
+D:\TF-Project\variable-demo\D1>terraform fmt
+output.tf
+
+D:\TF-Project\variable-demo\D1>terraform fmt
+
+D:\TF-Project\variable-demo\D1>powershell cat output.tf
+output "display1" {
+  value = var.myvar1
+}
+output "display2" {
+  value = local_file.myfile.id
+}
+
+D:\TF-Project\variable-demo\D1>terraform validate
+Success! The configuration is valid.
+
+
+D:\TF-Project\variable-demo\D1>
+##################################################################################
+Terraform data types
+------------------------
+https://developer.hashicorp.com/terraform/language/expressions/types
+
+variable port {
+  default = 8080
+  type = int
+}
+
+variable port {
+  default = "8080"
+  type = int(str) # typecast to int
+}
+
+
+str,int,float,bool,null 
+
+list <or> array - collection of items - index - 0 1 2 ..N 
+map <or> object - collection of items - key: value - key  
+
+variable "servers" {
+	default = ["OL5","OL6","OL7","OL8"]
+	type = list(str)
+}
+output result {
+	value = var.servers[0]
+}
+output result1{
+	value = "${var.server[0]} ${var.server[1]} ${var.server[-1]}"
+}	 # another way ${var.server.0} ${var.server.1} ${var.server.-1} 
+				   ---		   --              ---
+variable fname {
+	default = {"fname" = "index.html","findex" = 1013, "futil" = 98.34}
+}		  ----------------------------------------------------------
+Vs
+variable myname {
+	default = {fname = ["index.html",1013,98.34] } //MD - docs -> complex
+}
+output display{
+	value = var.myname[fname][0] # value = var.myname.fname.0
+}			
+
+# To see the specific outputblock 
+#
+# terraform output <outputBlockLogicalName> 
+#
+# Note: statefile should exists 
+# ----
+# terraform apply  (or) terraform refresh
+# terraform show
+#########################################################
+D:\TF-Project\variable-demo\D1\variable-output-demo>powershell cat p1.tf
+variable "server_name" {
+  default = "OL8"
+}
+variable "server_status" {
+  default = true
+}
+variable "server_LB" {
+  default = 98.43
+}
+variable "server_count" {
+  default = 5
+}
+output "instance" {
+  value = "Running instance name is:${var.server_name}"
+}
+output "result" {
+  value = "status:${var.server_status}\nCount:${var.server_count}"
+}
+
+variable "server_info" {
+default = ["OL8",true,98.43,5]
+}
+output display1{
+value="server name:${var.server_info[0]}\nstatus:${var.server_info.1} LB:${var.server_info.2}"
+}
+
+variable "server_details" {
+ default = {K1="OL8",K2=true,K3=98.43,K4=5}
+ description = "About OL8 server info"
+ type = map
+}
+
+output display2{
+value="server name:${var.server_details["K1"]}\nstatus:${var.server_details.K2} LB:${var.server_details.K3}"
+}
+output display3{
+value=var.server_details
+}
+
+D:\TF-Project\variable-demo\D1\variable-output-demo>
+###########################################################################################################################################
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
