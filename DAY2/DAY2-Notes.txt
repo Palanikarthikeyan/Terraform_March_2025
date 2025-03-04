@@ -1,0 +1,587 @@
+Recap
+--------
+terraform - IaC
+terraform architecture
+provider ->api 
+   - auth
+   - resource ...
+
+resource block
+variable block
+output block
+..
+terraform init
+terraform plan
+terraform apply
+terraform destroy
+terraform show 
+terraform validate
+terraform fmt
+terraform output <outputlogicalName>
+---------------------------------------------------------------------------
+tfvariables
+local block
+GitHub
+oci
+-----------------------------------------------------------------------------
+
+execution input (or) interactive input
+
+-------------------
+runtime input (or) commandline input  => terraform plan -var="variableName=value" -var="variableName=value"
+
+D:\TF-Project\TF-DAY2-Examples>terraform plan -var="demo2=Flask" -var="demo3=Django"
+
+Changes to Outputs:
+  + display = "demo1 is App1 demo2 is:Flask demo3 is:Django"
+-------------------
+file: auto.tfvars (or) terraform.tfvars (or) ownFileName.tfvars
+
+filename.tfvars {Enter}
+---------------
+variableName = value  # Key = Value format
+
+Note - there is no block structure
+-------------------------------------
+
+D:\TF-Project\TF-DAY2-Examples>terraform plan -var-file="myapps.tfvars"
+
+Changes to Outputs:
+  + display = "demo1 is App1 demo2 is:Flask demo3 is:FastAPI"
+----------------------------------------------------------------------
+myapps.tfvars
+----------------
+demo2="Flask"
+demo3="FastAPI"
+-----------------
+
+environment variable => TF_VAR_<variableName>
+---------------------
+|->env variable names are starts with TF_VAR_
+
+winx: set TF_VAR_demo2="Flask"
+      --- =======
+Linux :  
+        ~/.bashrc
+
+	export TF_VAR_demo2="Flask"
+	------
+-------------------------------------------------------------------
+TF variable precedence
+----------------------
+	commandline 	-var="variable=value"  # 1st 
+	|
+     terraform.tfvars (or) filename.tfvars # 2nd
+			  -var-file=<filename>.tfvars
+	|__ -var-file=terraform.tfvars <== not required
+	|
+	|
+	environment variable => TF_VAR_<variable> # 3rd
+	|
+	variable.tf (variable block)   # 4th 
+	|
+	interactive input (<STDIN>) # 5th 
+------------------------------------------------------------------------	
+
+variable "demo1" {}
+
+output "result1" {
+	value = var.demo1
+}
+
+output "result2" {
+        value = var.demo2
+}		----------//Error - undefined variable
+		
+---------------------------------------------------------------------------------
+file: p1.tf
+--------------
+variable "demo1" {
+  default = "App1"
+}
+variable "demo2" {}
+variable "demo3" {}
+
+output display{
+value = "demo1 is ${var.demo1} demo2 is:${var.demo2} demo3 is:${var.demo3}"
+}
+------------------------------
+terraform plan
+# see the execution flow
+
+terraform plan -var="demo1=Flask" -var="demo2=Rails" -var="demo3=Django" {Enter}
+# see the demo1 value Not reading from variable block
+#         ------------//1st priority will give to commandline args 
+
+D:\TF-Project\TF-DAY2-Examples>powershell cat myapp.tfvars
+demo2="Flask"
+demo3="FastAPI"
+
+terrafor plan -var-file="myapp.tfvars" {Enter}
+# see the demo2 & demo3 values
+
+# rename => myapp.tfvars ->terraform.tfvars
+terrafor plan  <== don't pass tfvars file 
+# see the execution
+
+# rename => terraform.tfvars -> myapp.tfvars
+terraform plan {enter}
+
+#############################################################################
+locals{} <== unnamed block
+
+Syntax:-
+----------
+locals{
+	userdefinedKey = value
+	...
+}
+
+To access locals block attribute => local.<key>
+###################################################################
+
+-----------------------
+variable BlockName {
+  default = value
+}
+-----------------------//file: var.tf
+		
+we can't write locals block in separate file
+so locals block always in side resource block file only (main.tf)
+
+file: main.tf
+-----------------
+resource local_file "myfile" {
+	filename = var.fname
+}
+-------------------
+file: variable.tf
+-------------------
+variable fname{
+  default = "/etc/passwd"
+}
+------------------
+
+#####################  Vs
+file: main.tf
+-----------------
+locals{
+   fname="/var/log/boot.log"
+}
+resource local_file "myfile" {
+	filename = local.fname
+}
+--------------------
+variable   		vs 		local
+|					|
+named					unamed
+default - predefined key		user_defined_key 
+|
+scope: input values accessable		access current resource only and not external module
+         other module		
+--------------------------------------------------------------------------------------------------------------
+
+GitHub
+-------
+
++----------+
+|	   | ------->TF ------->[GitHub]
++----------+			    |->Token 
+		     |----------->
+			Token	# valid
+		------<---------
+		------>---------//create a repository(infra)
+
+GitHub provider details
+|
+GitHub resource details
+	|
+	|->key = value
+	   ---   ^^^^^
+		  |<== we can pass value from variable 
+					
+GitHub repo creation 
+----------------------
+1st create Token (Personal Access Token - PAT)
+
+Step 1: Login GitHub
+	
+|
+Step 2: Settings ->Developer settings -> Personal Access Token(PAT) ->Token Classic -> Generate newToken
+
+
+
+-------------------------
+Copy provider (github) to provider block
+----
+Copy resource block 
+
+D:\TF-Project\TF-DAY2-Examples\GitHub-Activity>powershell cat provider.tf
+terraform {
+  required_providers {
+    github = {
+      source = "integrations/github"
+      version = "6.6.0"
+    }
+  }
+}
+
+provider "github" {
+  # Configuration options
+ token=""
+}
+
+D:\TF-Project\TF-DAY2-Examples\GitHub-Activity>powershell cat main.tf
+resource "github_repository" "mygit-hub" {
+  name        = "TF-example"
+  description = "This repository created from TF"
+  visibility = "public"
+}
+
+
+D:\TF-Project\TF-DAY2-Examples\GitHub-Activity>powershell cat output.tf
+output display{
+value = "id:${github_repository.mygit-hub.id}\nrepo id:${github_repository.mygit-hub.repo_id}"
+}
+
+
+D:\TF-Project\TF-DAY2-Examples\GitHub-Activity>terraform apply --auto-approve
+###################################################################################
+OCI 
+----
+ create a new instance (terraform server)
+		|
+		SSH Keys
+		|
+		connect - terraform server
+		|
+		install terraform
+		|
+		oci services
+		|->download oci providers
+					
+		|-> tenancy_ocid
+		    user_ocid,fingerprint,private_key_path,region
+		
+
+
+################################################################################
+ ssh -i ssh-key-2025-03-04.key opc@130.61.143.118 
+
+[opc@terraform-server ~]$
+[opc@terraform-server ~]$
+[opc@terraform-server ~]$ uname -a
+Linux terraform-server 5.15.0-304.171.4.el8uek.x86_64 #2 SMP Tue Dec 24 06:33:39 PST 2024 x86_64 x86_64 x86_64 GNU/Linux
+
+[opc@terraform-server ~]$ sudo su -
+
+[root@terraform-server ~]# passwd
+Changing password for user root.
+New password: <TYPE YOUR OWN ROOT PASSWORD>
+Retype new password: <RETYPE THE SAME ROOT PASSWORD>
+passwd: all authentication tokens updated successfully.
+[root@terraform-server ~]#
+[root@terraform-server ~]#
+[root@terraform-server ~]# clear
+[root@terraform-server ~]# wget https://releases.hashicorp.com/terraform/1.11.0/terraform_1.11.0_linux_amd64.zip
+--2025-03-04 06:51:57--  https://releases.hashicorp.com/terraform/1.11.0/terraform_1.11.0_linux_amd64.zip
+Resolving releases.hashicorp.com (releases.hashicorp.com)... 18.239.69.71, 18.239.69.121, 18.239.69.29, ...
+Connecting to releases.hashicorp.com (releases.hashicorp.com)|18.239.69.71|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 27665781 (26M) [application/zip]
+Saving to: ‘terraform_1.11.0_linux_amd64.zip’
+
+terraform_1.11.0_linux_ 100%[===============================>]  26.38M  --.-KB/s    in 0.1s
+
+2025-03-04 06:51:57 (229 MB/s) - ‘terraform_1.11.0_linux_amd64.zip’ saved [27665781/27665781]
+
+[root@terraform-server ~]# ls
+terraform_1.11.0_linux_amd64.zip
+[root@terraform-server ~]# unzip terraform_1.11.0_linux_amd64.zip
+Archive:  terraform_1.11.0_linux_amd64.zip
+  inflating: LICENSE.txt
+  inflating: terraform
+[root@terraform-server ~]#
+--------------------------------------------------------------------------------
+
+[root@terraform-server ~]# ls
+LICENSE.txt  terraform  terraform_1.11.0_linux_amd64.zip
+
+[root@terraform-server ~]# echo $PATH
+/usr/share/Modules/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin
+
+[root@terraform-server ~]# mv terraform /usr/bin
+[root@terraform-server ~]#
+
+[root@terraform-server ~]# which terraform
+/usr/bin/terraform
+[root@terraform-server ~]#
+---------------------------------------------------------------------------------
+file: provider.tf
+------------------
+terraform {
+  required_providers {
+    oci = {
+      source = "oracle/oci"
+      version = "6.28.0"
+    }
+  }
+}
+
+provider "oci" {
+  # Configuration options
+ tenancy_ocid = ""
+ user_ocid =""
+ fingerprint = ""
+ private_key_path=""
+ region=""
+}
+
+
+[DEFAULT]
+user=ocid1.user.oc1..
+fingerprint=
+tenancy=ocid1.
+region=us-ashburn-1
+key_file=<path to your private keyfile> # TODO
+
+
+
+[root@terraform-server ~]# mkdir ~/.oci
+[root@terraform-server ~]# cd ~/.oci
+[root@terraform-server .oci]# openssl genrsa -out ~/.oci/oci_api_key.pem 2048
+Generating RSA private key, 2048 bit long modulus (2 primes)
+...+++++
+.....+++++
+e is 65537 (0x010001)
+[root@terraform-server .oci]# chmod go-rwx ~/.oci/oci_api_key.pem
+[root@terraform-server .oci]#
+[root@terraform-server .oci]# openssl rsa -pubout -in ~/.oci/oci_api_key.pem -out ~/.oci/oci_api_key_public.pem
+writing RSA key
+[root@terraform-server .oci]# openssl rsa -pubout -outform DER -in ~/.oci/oci_api_key.pem |openssl md5 -c
+writing RSA key
+(stdin)= 
+------------------------------------------------------------
+
+terraform {
+  required_providers {
+    oci = {
+      source = "oracle/oci"
+      version = "6.28.0"
+    }
+  }
+}
+
+provider "oci" {
+  # Configuration options
+ tenancy_ocid = "ocid1"
+ user_ocid ="ocid1."
+ fingerprint = "c"
+ private_key_path="/root/.oci/oci_api_key.pem"
+ region="us-ashburn-1"
+}
+
+# for oci resource 
+# -----------------
+compartment_id = "ocid1"
+
+#####################################################################################################################
+	
+
+destory simple-vcn
+|
+create simple-vcn 
+display (output block) - vcn.id,display_name
+-------
+
+[root@terraform-server vcn]#
+[root@terraform-server vcn]# cat -n provider.tf
+     1
+     2
+     3  terraform {
+     4    required_providers {
+     5      oci = {
+     6        source  = "oracle/oci"
+     7        version = "6.28.0"
+     8      }
+     9    }
+    10  }
+    11
+    12  provider "oci" {
+    13    # Configuration options
+    14    tenancy_ocid     = "ocid1"
+    15    user_ocid        = "ocid1"
+    16    fingerprint      = "c"
+    17    private_key_path = "/root/.oci/oci_api_key.pem"
+    18    region           = "eu-frankfurt-1"
+    19  }
+    20
+[root@terraform-server vcn]# cat -n main.tf
+     1
+     2
+     3
+     4
+     5
+     6  resource "oci_core_vcn" "simple-vcn" {
+     7    compartment_id = "ocid1"
+     8    cidr_block     = "10.0.0.0/16"
+     9    display_name   = "simple-vcn"
+    10  }
+    11
+[root@terraform-server vcn]# cat output.tf
+
+
+
+output "vcn-display" {
+  value = "vcn ID:${oci_core_vcn.simple-vcn.id} display name:${oci_core_vcn.simple-vcn.display_name}"
+}
+[root@terraform-server vcn]#
+#############################################################################################################################################################
+
+env variable
+-------------
+in terraform env variable name starts with TF_VAR_<label>
+--------------------------------------------------
+Lab Instance is OL8 - update env variable => ~/.bashrc
+
+In Linux 
+Login as: root			Login as:opc
+password:			password:
+root@host~]#  pwd		opc@host~]$ pwd
+/root				/home/opc 
+root@host~]#  ls -a		opc@host~]$ ls -a
+.bashrc				.bashrc
+-------				-------		
+|
+export VARIABLE=VALUE
+------------------------	-------------//
+|
+source .bashrc (or) open new subshell (or) close current shell;open new shell
+...............    ..................     ....................................
+==============================================================================
+
+tenancy_ocid     = "ocid1.tenancy.oc1..aaoa"
+  user_ocid        = "ocid1.user.oc1..aq"
+  fingerprint      = "c"
+  private_key_path = "/root/.oci/oci_api_key.pem"
+  region           = "eu-frankfurt-1"
+
+Go to login ( cd {Enter} ) => root@host~]#
+
+
+vi ~/.bashrc
+export TF_VAR_tenancy_ocid="ocid1.tenancy.oc1."
+export TF_VAR_user_ocid="ocid1.user.oc1.."
+export TF_VAR_fingerprint="c"
+export TF_VAR_private_key_path="/root/.oci/oci_api_key.pem"
+export TF_VAR_region="eu-frankfurt-1"
+
+export TF_VAR_compartment_ocid="ocid1.compartmenta"
+
+############################################################################################################################################
+Data block
+------------
+ -> data source 
+ -> retrive existing information from cloud
+ -> read only block - fetch attributes
+ -> this block not create any resource 
+ -> querying existing resource 
+ -> block syntax
+  ===============
+  data oci_<resource_type> "<logicalName>" {
+	# configuration parameters
+  }
+ example:
+  data oci_core_vcn "simple-vcn1" {
+	.... # not create resource
+  }		
+   Vs
+  resource oci_core_vcn "simple-vcn2" {
+	..    # create a resource(infra)
+	vcn_id = data.oci_core_vcn.simple-vcn1
+  }		
+
+###############
+
+list/array - collection of ordered data - index based 
+	
+hash/object - collection of unordered data - key based 
+
+variable "demo1" {
+	default = ["AD1","AD2","AD3"] <== Single dimensional 
+}
+
+variable "demo2" {
+	default = {"K1"="AD1","K2="AD2"} <== Single dimensional 
+}
+ Vs
+variable "demo3" {
+	default = {"K1"=["AD1","AD2","AD3"] <== MD 1Key =>Multiple value
+}		           0     1    2
+		   -------------------------//Hash of Array
+
+output "display"{
+	value=var.demo3.K1.0 =>AD1
+			K1.1 =>AD2
+			..
+}
+
+variable "demo4"{
+	default = [{K1="AD1",K2="AD2"},{K1="AD3"},{},{},{}] # Array of Hash
+}		  |--------0th--------|----------|--|--|--|
+		--------------------------------------------
+output "display2"{
+	value = var.demo4.0.K1 ->AD1
+		var.demo4.1.K1 ->AD3
+
+####
+
+Changes to Outputs:
+  + display = {
+      + availability_domains = [
+          + {
+              + compartment_id = "ocid1.tenancy.oc1.da"
+              + id             = "ocid1"
+              + name           = "XxYz:EU-FRANKFURT-1-AD-1"
+            },
+          + {
+              + compartment_id = "ocid1.tenancy.a"
+              + id             = "ocid1.q"
+              + name           = "XxYz:EU-FRANKFURT-1-AD-2"
+            },
+          + {
+              + compartment_id = "ocid1.tenancyda"
+              + id             = "ocid1.avq"
+              + name           = "XxYz:EU-FRANKFURT-1-AD-3"
+            },
+        ]
+      + compartment_id       = "ocid1.tenancy.oc1..a"
+      + filter               = null
+      + id                   = "IdentityAvailabilityDomainsDataSource-1862540292"
+    }
+####
+
+[root@terraform-server data-block]# cat p1.tf
+data "oci_identity_availability_domains" "ADs" {
+    #Required
+    compartment_id = "${var.tenancy_ocid}"
+}
+
+output display1 {
+ value = data.oci_identity_availability_domains.ADs.availability_domains[0]["name"]
+}
+
+output display2 {
+ value = data.oci_identity_availability_domains.ADs.availability_domains[1]["name"]
+}
+
+output display3 {
+ value = data.oci_identity_availability_domains.ADs.availability_domains[2]["name"]
+}
+
+output display4 {
+ value = data.oci_identity_availability_domains.ADs.availability_domains.2.name
+}
+[root@terraform-server data-block]#
+#######################################################################################################
+
