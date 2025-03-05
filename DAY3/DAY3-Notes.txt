@@ -1,0 +1,271 @@
+Recap
+------
+oci providers
+
+data block
+-------------
+ # info about resource 
+#################################################################
+Task:
+--------
+create new VCN with public subnet along with IGW,route table 
+
+resource 1  - create a new vcn		=>  oci_core_vcn (or) oci_core_virtual_network
+resource 2  - create a new IGW		=>  oci_core_internet_gateway
+resource 3  - create a new route table  =>  oci_core_route_table
+resource 4  - create a public subnet	=>  oci_core_subnet
+
+
+###########################################################################
+resource local_file "myfile" {
+  filename = "D:\\t1.log"
+  content = "random pet name is:${random_pet.mypet.id}"
+  depends_on = [random_pet.mypet] # explicit dependency
+}		# 1st execution
+
+resource random_pet "mypet" {
+	prefix = "abc"
+	
+}
+By default terrafom supports implicit dependency
+############################################################################
+Task
+-----
+Creation of Public and Private subnet along with NAT Gateway
+
+create a new vcn
+create a new IGway
+create a new NATGateway
+create a new RouteTable			resource "oci_core_route_table" "rt1" {}
+		|->T1 -> IGway 		resource "oci_core_route_table" "rt2" {}
+		|->T2 -> NATGateway 
+
+create a public subnet 1 AD1 # use data block resource "oci_core_subnet" "tf-pub" {}
+	  |->route_table_T1.id 		      
+
+create a private subnet 1 AD2 # use data block resource "oci_core_subnet" "tf-pri" {}
+	  |->route_table_T2.id
+
+data block
+###################################################################################
+
+Network
+.........
+subnet => divide large network small network
+				----------
+				 |->range of IP (1 to 3)
+				    ..........
+				     [] [] [] <= device (or) node 
+				      |__|__|  
+				      1  2 3
+					 |
+			    <router <or> gateway>
+					 |
+				 |->range of IP (4 to 6)
+				    ..........
+				     [][][] <= device (or) node
+				      | ||
+				      4 5 6
+	255.255.255.0
+
+	Classless Inter-Domain Routing CIDR - 
+
+	192.168.1.0 to 192.168.1.255 => 256 <= No.of IP 256
+		
+	192.168.1.1
+	192.168.1.2
+		 ...
+
+	network config => IPADDR = 192.168.1.5
+			  PREFIX = 24
+
+			192.168.1.5/24
+				    |___ 24 bits(network portion)
+					 remaining host
+	
+	  2|24
+           |-- 0
+	  2|12 0
+	  2|..
+			10.0.0.0/24 => 10.0.0.0 ... 10.0.0.255 = 256 IPs
+			10.0.0.0/28 => 
+			10.0.0.0/30
+			------------//cidr
+
+Subnet (subnetMask) => 255.255.255.N
+IP Range  start-end
+|
+CIDR Notation =>10.0.0.0/24
+			 28 
+			 ..
+ex: 10.0.0.0 - 10.0.0.5 //range
+
+	IP: 10.0.0.5 - broadcast address
+	
+   usable IP => 10.0.0.1 10.0.0.2 10.0.0.3 10.0.0.4 
+		------------------------------------
+---------------------------------------------------------------------------------
+OCI Storage services
+Local NVME 
+Block Volume
+File Storage  - NFS3
+Object storage  
+Archive storage 
+
+File Storage  - NFS3
+-----------------------
+NFS v3
+NLM for file lock
+POSIX
+
+NFS 
+-----
+  |->export 		|->mount
+	node1		   node2
+	|
+	/D1		 node1:/D1  /mnt
+ export			mount
+	|_________________|
+		nfs
+
+Mount target
+---------------
+ |-> In OCI network endpoint for oci file system.
+ 
+  +--------+       +--------+
+  | []		   |        |
+  |   |___________________________Mount point  - NFS endpoint 
+  | nfsclient        nfsclient	  	       - IPAddress and DNS name 
+  +--------+
+
+ export path - makes a filesystem available through mount target
+			
+		/D1/path  - F1
+		/D1/D2/path //not
+		---
+		 No two filesystem associated with same mount target
+	
+	export path1	/D1/path - F1  (filesystem1)
+	export path2	/D2/path - F2  (filesystem2)
+	export path3	/D3/path - F3  (filesystem3)... 100
+	|
+	mount 10.0.0.16/D1/path /mnt/mountpointdir 
+	
+ 
+
+resource  oci_file_storage_mount_target mt {
+	comparment_id
+	subnet_id
+	filesystem
+	availability_domain
+	display_name
+	
+
+}
+===========================================================
+filesystem
+----------------
+  oci_file_storage_mount_target 
+	-> availability_domain
+	-> compartment_id
+	-> subnet_id - vcn subnetD
+	-> display_name 
+
+ oci_file_storage_export_set 
+	-> mount_target_id = oci_file_storage_mount_target.<logicalName>.id
+	
+ oci_file_storage_file_system
+	-> availability_domain
+	-> compartment_id
+	-> display_name
+
+ oci_file_storage_export
+	-> export_set_id = oci_file_storage_export_set.<logicalName>.id
+	-> file_system_id = oci_file_storage_file_system.<logicalName>.id
+	-> path = "/tf"
+
+###############################################################################
+Object storage
+--------------
+ namespace - same as your tenancy
+
+ creation of a new bucket
+ ------------------------
+ |-> oci_objectstorage_bucket
+     ========================
+  - see the Menu ->Object Storage 
+		    -------------
+   we've created a bucket without any option
+
+ '2025-03-06T00:09:51.000+02:00'
+
+
+ |-> Pre-authenticated request 
+     ------------------
+	  ->user to access a bucket
+
+ |-> oci_objectstorage_preauthrequest 
+     ----------------------------------
+	access_type
+ 
+ |-> data "oci_objectstorage_bucket_summaries" "test_buckets" {
+    #Required
+    compartment_id = var.compartment_id
+    namespace = var.bucket_namespace
+  } 
+ 
+ //use the above resource - create output block
+	- display summary details
+
+timecreated field - datetime - read only field
+		   ----------//timestamp
+YYYY-MM-DDThh:mm:ssZ //records when the bucket was created.
+
+2025-03-06T16:56:00Z
+
+
+##### 
+stale plan
+stale error
+stale .....
+----------------// where the state of infrastructure not matches with actual configuration.
+
+// User -directly ->changes ->infra ->again plan //stale 
+How to resolve?
+terraform refresh  # to update the state file with current state of the infrastructure
+
+# module (or) download outdated plugin version //stale 
+#
+# provider related stale => terraform init
+-------------------------------------------------------------------------------------
+
+locals{
+ oci_regions = ["us-phoenix-1","us-ashburn-1","eu-frankfurt-1"]
+}
+resource "oci_objectstorage_bucket" "tfb" {
+	...
+	...
+ 	for_each = toset(local.oci_regions)
+	name = "my-bucket-${each.key}"
+	..
+	provider = oci.provider[each.key]
+}
+
+provider "oci" {
+  alias            = "home"
+  region           = var.region
+  tenancy_ocid     = var.tenancy_ocid
+  user_ocid        = var.user_ocid
+  fingerprint      = var.fingerprint
+  private_key_path = var.private_key_path
+}
+
+provider "oci" {
+  alias            = "region2"
+  region           = var.region2
+  tenancy_ocid     = var.tenancy_ocid
+  user_ocid        = var.user_ocid
+  fingerprint      = var.fingerprint
+  private_key_path = var.private_key_path
+}
+#################################################################################
