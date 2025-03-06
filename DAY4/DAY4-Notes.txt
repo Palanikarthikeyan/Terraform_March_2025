@@ -1,0 +1,489 @@
+TF-meta arguments
+  - TF keywords 
+TF - functions 
+OCI - LB,compute
+TF - module,import
+|
+Configuration Management - Ansible 
+|
+###############################################################
+C:\Users\Administrator>terraform console
+>
+
+>
+
+> max(15,67,98)
+98
+> min(23,44,21)
+21
+>
+Ternary Conditional Operator
+------------------------------
+condition ? true value : false value
+---------
+ |
+return bool 
+
+
+resource "oci_core_instance" "myinstance" {
+   count = var.create_instance ? 1 : 0
+   -----    
+
+}
+
+variable "blockvolumes" {
+ description = "To provision block volumes"
+  type        =  map(object({
+    availability_domain       = string
+    compartment_id            = string
+    display_name              = string
+    size_in_gbs               = optional(string)
+    is_auto_tune_enabled      = optional(string)
+    vpus_per_gb               = optional(string)
+    kms_key_id                = optional(string)
+    
+    is_shareable              = optional(bool)
+    use_chap                  = optional(bool)
+    defined_tags              = optional(map(any))
+    freeform_tags             = optional(map(any))
+  }))
+  default     = {}
+}
+
+
+source   = "./modules/network/subnet"
+  for_each = (var.subnets != null || var.subnets != {}) ? var.subnets : {}
+  depends_on = [module.vcns, module.security-lists]
+  #Required
+  tenancy_ocid   = var.tenancy_ocid
+  compartment_id = each.value.compartment_id != null ? (length(regexall("ocid1.compartment.oc1*", each.value.compartment_id)) > 0 ? each.value.compartment_id : var.compartment_ocids[each.value.compartment_id]) : null
+  vcn_id         = length(regexall("ocid1.vcn.oc1*", each.value.vcn_id)) > 0 ? each.value.vcn_id : merge(module.vcns.*...)[each.value.vcn_id]["vcn_tf_id"]
+  cidr_block     = each.value.cidr_block
+
+##########################################################################################################################################################################################################################################
+
+module 
+- block 
+- reusability
+source "Path"
+
+
+In programming
+
+file: E:\\ab.py <== loadable code / runnable code
+-----------------
+def display():
+  ....1
+  ....
+
+  ....100
+-------------------
+					file: D:p1.py <== running code
+					----------------
+					print("this is p1.py file")
+					import ab
+E:\\project\\				ab.display() # reusability
+modules/ <==loadable code
+	main.tf
+	--------			file: mymain.tf  <== running code
+	variable.tf					module mymodule {
+					  source = "E:\\project\\modules"
+					}
+					file: variable.tf {}
+					terraform plan
+
+modules/
+	compute/
+	   |->main.tf
+	   |->variable.tf
+	   |->output.tf
+	vcn/
+	project1/
+
+
+main1.tf
+  |->module moduleName{
+	source = ./modules/compute 
+    } 
+  |->myvar.tfvars
+	|
+	variable=value
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+import - keyword
+ |->load an existing resource 
+
+source - source the module for create a new resource
+
+import - bring an existing resource under terraform control
+|->command line - this not a block
+
+terraform import <resourceName>.<resourceLogicalName> resourceId
+-------------------------------------------------------------------//commandline 
+import wont create a config file
+
+file: p1.tf
+      |
+  resource <> <>{
+	...
+	...
+ }
+
+terraform import aws_instance.my_aws i-<id>
+					|___awscloudUI
+...
+# create state file - track an existing resource 
+
+
+###################################################
+module "myvcn" {
+	source = "module/project/vcn"
+}		  |
+		from local m/c
+	
+module "myvcn" {
+	source = "git::https://github.com/terraform-cloud-modules/vcn.git"
+}		  ----------------------
+			|->
+-----------------------------------------------------------
+
+module "vpc" {
+  source = "git::https://github.com/terraform-aws-modules/vpc/aws"
+
+  name = "my-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+  enable_nat_gateway = true
+  enable_vpn_gateway = true
+
+  tags = {
+    Terraform = "true"
+    Environment = "dev"
+  }
+}
+
+https://github.com/oracle-terraform-modules/terraform-oci-vcn
+-----------------------------------------------------------------------
+Loadbalancer
+----------------
+Traffic distribution 
+ - Round robin
+ - least connection 
+ - IP Hash
+
+SSL
+ https - upload - TF =>file('')
+
+listeners ptotocol + port
+
+LB - public private
+
+terraform apply
+|
+login oci console 
+|
+sudo yum install httpd -y
+sudo systemctl enable httpd
+sudo systemctl start httpd
+|
+# to create a firewall rules to allow access to the ports on which http server listens
+sudo firewall-cmd --zone=public --add-service=http  --permanent
+sudo firewall-cmd --reload
+|
+echo "Test page " >/var/www/html/index.html
+|
+curl http://<public-IP>/ {enter}
+...	
+################################################################################
+
+Terraform provisioners
+----------------------
+ In TF ->[infrastructure]
+	  --------------
+		|->manage the appln (execute one script;install;configure)
+
+1. local provisioner => local-exec - execute os command;run appln on the terraform (localm/c)
+			----------
+
+2. remote provisioner => remote-exec - execute os command;run appln on the new resource 
+
+resource <resourceName> logicalName {
+
+
+
+  provisioner <provisioner-type> {}  <== nested block
+
+}
+
+resource "oci_core_instance" "oci" {
+	....# install configuration
+	
+	provisioner "local-exec" {
+		command = "echo 'Instance created on:`date`' >r1.log"
+	}
+..
+}
+
+Vs
+
+resource "oci_core_instance" "oci" {
+	....# install configuration
+	
+	provisioner "remote-exec" {
+		inline = ["echo 'Instance created on:`date`' >/tmp/t1.log",
+			  "sudo apt update",
+			  "sudo apt install -y httpd"
+			 ]
+
+                 connection {
+			type = "ssh"
+			host =""
+			user = "opc"
+			password = ""
+			private_key = file("~/.ssh/ip_rsa")
+		}		
+	}
+..
+}
+
+#################################################################################
+			(1)
+ p1.tf ----------->[ create infra ]
+    |				|___(3) - modifing infra using webUI
+    |->statefile(2)		          |
+					(4) - modified infra
+
+
+again i will plan ->apply
+|->create new  (5)	# -->[ create a newinfra ]
+
+		
+			(1)
+ p1.tf ----------->[ create infra ]
+    |				|___(3) - modifing infra using webUI
+    |->statefile(2)		          |
+					(4) - modified infra
+					//Keep this infra only
+
+terraform plan
+terraform apply - apply p1.tf rules 	--->[ create a new infra only ]
+			-----			modified infra is deleted 
+					### 
+
+taint command - resource is tained 
+terraform taint <resourceType>.<resourceName>
+terraform untaint <resourceType>.<resourceName> # (4) keep modified infra
+	  -------	
+	   |->stop TF from recreating it
+
+################################################################################################
+ IaC
+ --------
+   |->provisioning 
+		|->Terraform 
+
+   |->Configuration Management
+		|->ansible 
+
+Terraform					Vs 		Ansible
+-----------							----------
+ [ create an infra ->manage this infra ]	  [ configure appln ->manage the appln ]
+		
+ hashicorp							redhat
+ terraform tool is implemented by go language			ansible by python
+
+ declarative style of code 				procedure style of code
+ 							  |
+ BlockName ResourceSpecificName LogicalName {		 yaml code - playbook
+	Key = Value //parameters			  |
+	|						target section
+	option						variable section
+	}						task section
+							handler section
+terraform						template section
+provider						\__ role (directory)
+resource - create a real resource
+variable
+local
+output
+data
+module
+ TF ->TFCore -->Cloud ->create infra				
+|
+registry --download ->tf config ..			galaxy - list of existing ansible roles/collection
+							   |->download ->roles...
+
+resource "null_resource" "demo" {
+ provisioner "local-exec" {
+	command = ""
+ }
+
+}
+resource "null_resource" "demo" {
+ provisioner "remote-exec" {
+	inline = [
+	   sudo dnf-update,
+	   sudo dnf install -y httpd,
+	   sudo systemctl start httpd
+	]
+	connect {
+	  type = "ssh"
+	  user = "user1"
+	  private_key = file("~/.ssh/id_rsa")
+	  host = "InstanceIP"
+	}
+ }
+}				
+==============================================================================
+Configuration Management
+------------------------
+	|-> validation based execution
+	
+	Create a new user // validate input user is already exists 
+							|     |->Yes - no action
+							| (system state: No changes)
+							|
+						not exists - create a user
+						system state - changed 
+
+ansible ad-hoc command - commandline  #  (1)
+|
+understand yml (or) yaml structure    #  (2)
+|
+convert ad-hoc command ->yml structure  # (3)
+			 -------------//playbook
+					|->like a script
+			filename.yml <or> filename.yaml
+
+ansible # we can adhoc command
+ansible-playbook p1.yml
+
+Ansible
+---------
+	    Linux like OS
+	  ansible Control system
+		<or>
+	  ansible master system				[host (or) node ] # winx
+	+--------------------+				[host (or) node ] # macos
+	|  [ansible]         |	  <---SSH--->		[host (or) node ] # linux
+	|[inventoryFile]     |				  ..
+	|  - list of remote  |				 ----------------//node m/c
+	|    node details    |
+	+--------------------+
+
+ -> agent less architecture 
+ -> there is no service 
+
+ -> ansible - module based  Vs Os based commandline execution(or) automation
+	|		       --------------------------------// we need to learn more os commands
+	|
+	explore more ansible module
+	---------------------=======
+				|->existing python code(.py)
+
+
+ @@@@@@@@@@@@@@
+
+ process creation - linux system call => fork() //used in ansible 
+					 ------
+ @@@@@@@@@@@@@
+
+pip3 install ansible  <== linux like os
+--------------------
+
+How to test ansible is available in my system?
+
+ansible --version
+
+yum install ansible 	Vs pip install ansible
+|
+ansible --version	   ansible --version 
+
+config_file=/etc/ansible/ansible.cfg
+	  --------------============
+			  | map to
+			  | inventory file
+
+
+  [host01]	[host02]
+	|___________|
+
+ /etc/hosts 
+FQDN  IPAddress alias
+----------------------------------------------
+ansible-adhoc 
+|
+Syntax:-
+-----------
+ansible <remoteNode>   -m module -a "arguments"
+	  <or>			    | Key=Value |
+	<remoteGroup>
+	-------------
+	 |
+	 |___ from inventory file
+
+
+file: p1.sh
+----------------
+id -u userA >/dev/null 2>&1
+if [ $? -eq 0 ];then
+	echo "userA is already exists"
+else
+	useradd userA >/dev/null 2>&1
+	if [ $? -eq 0 ];then
+		echo "userA is created"
+		exit
+	else
+		echo "userAdd creation is failed"
+	fi
+fi
+
+	Vs
+
+ansible web -m user -a "user=userA state=present"
+
+inventoryfile
+[web]
+node1
+node2
+..
+node100
+##############################################################################
+
+
+  +-----------+
+  | control mc|<---------SSH------------->[ remote node ] - host01
+  +-----------+
+	|
+	ansible
+	|	  (parent)
+	ansible - python - SSH-------(1)-------->[remote node]
+						   |
+						  (2)
+						 create a subshell 
+						   |
+						 create a new python (on remote node) (3)
+						   |	  (child)
+						 execute ansible module(pythonCode)
+						   |
+						 .... # result 
+	--------------<----------------------------| 
+			json 			
+						 child python  - exit 
+						 subshell - exit
+##################################################################################
+
+
+
+
+
+
+
+
+
+
+
