@@ -1,0 +1,650 @@
+ansible adhoc command
+	|
+	YAML
+	|
+	playbook (p1.yml <or> p1.yaml)
+
+ansible <remoteNode> -m <module> -a <args>
+ |
+ansible-playbook p1.yml
+ |
+ roles
+ |
+galaxy
+--------------------------------------------
+  |->  integrate to terraform  
+--------------------------------------------------------------------------
+	
+use case: CGI Appln
+	  ------------
+	  client configuration - html,css files
+	  server configuration - server script
+	  install webserver & configure webserver
+	  install data base & configure db file
+	  map - server path - cgi-bin/ - configuration
+	  test web page
+
+<Admin>
+	 [ node1 ] ....... [node100] ... [node500]
+
+[cgi]
+node1
+node2
+..
+node50
+[db]
+node3
+node4
+
+[test]
+node10
+..
+node499
+node500
+
+Admin
+|
+|___ ansible cgi -m yum -a "name=httpd state=installed"
+	     ---
+     ansible cgi -m service -a "name=httpd state=started"
+	     ---
+     ansible db -m yum -a "name=mysql state=installed"
+             --
+     ansible test -m template -a "src=file.j2 dest=/etc/test.conf"
+             ----
+
+     ansible all -m command -a "df -Th"
+	     ---
+	      |<-- keyword - all the groups
+
+#####################################################################################
+ansible command module
+- execute os command
+  won't supports specialchars | ; & > >>
+	Vs
+ansible shell module
+- execute os command
+- supports | ; & > >> special chars
+
+
+[root@krosumlabs DAY4]# ansible all -m command -a "uptime"
+student | CHANGED | rc=0 >>
+ 10:27:43 up 8 min,  2 users,  load average: 0.00, 0.01, 0.01
+example | CHANGED | rc=0 >>
+ 10:27:43 up  1:35,  2 users,  load average: 0.00, 0.00, 0.00
+[root@krosumlabs DAY4]#
+				Vs
+[root@krosumlabs DAY4]# ansible all -m shell -a "uptime"
+student | CHANGED | rc=0 >>
+ 10:28:13 up 9 min,  2 users,  load average: 0.00, 0.01, 0.01
+example | CHANGED | rc=0 >>
+ 10:28:13 up  1:35,  2 users,  load average: 0.00, 0.00, 0.00
+[root@krosumlabs DAY4]#
+
+ansible all -m shell -a "ps -elf|tail -n 5 >/tmp/r1.log"
+				
+#######################################################################
+To install software package 
+ - yum module - OL[567] 
+ - dnf module - OL[89]  
+ - apt module - ubuntu debian 
+
+ansible-doc yum {Enter}	
+			
+ansible-doc dnf {Enter}
+ansible-doc apt {enter}
+########################################################################
+To start any service 
+service module
+--------
+ansible-doc service 
+
+ansible <remoteNode> -m service -a "name=<serviceName> state=started"
+								<or>
+							     stopped
+
+----------------------------------------------------------------------
+To copy the file from <control m/c (ansible)> to each remote m/c
+copy module
+
+ansible <remoteNode> -m copy -a "src=SourceFile dest=path/filename"
+
+[ansible-system]
+	p1.sh
+	|----------------copy module---->--------------[node1 node2 node ..nodeN]
+			
+To get the file from each remote node to local (or) ansible contrl system
+fetch module
+
+[ansible-system]
+	/tmp
+	|------<----------fetch module----<--------------[node1 node2 node ..nodeN]
+							 sys.log sys.log sys.log
+		
+	 /tmp/node1/path/sys.log
+	 /tmp/node2/path/sys.log
+         ..
+ansible <remoteNode> -m fetch -a "src=SourceFile dest=path"
+
+Task:
+------
+task1:  use shell module - execute os command redirect command results to r1.log
+task2:  use fetch module - fetch r1.log to /tmp 
+
+
+[root@krosumlabs DAY4]# ansible all -m shell -a "df -Th / >/tmp/r1.log"
+
+[root@krosumlabs DAY4]# ansible all -m fetch -a "src=/tmp/r1.log dest=/tmp"
+
+student | CHANGED => {
+    "changed": true,
+    "checksum": "30a4f841946b8de1f3deb572a2acc3107e7e4240",
+    "dest": "/tmp/student/tmp/r1.log",
+    "md5sum": "2d72ef923326560a7607f2eca2531cb0",
+    "remote_checksum": "30a4f841946b8de1f3deb572a2acc3107e7e4240",
+    "remote_md5sum": null
+}
+example | CHANGED => {
+    "changed": true,
+    "checksum": "919eb580bc0ed4d4a7c9679cef99c00530dc8936",
+    "dest": "/tmp/example/tmp/r1.log",
+    "md5sum": "60247132c47acd095ef25d8e3c4c5f00",
+    "remote_checksum": "919eb580bc0ed4d4a7c9679cef99c00530dc8936",
+    "remote_md5sum": null
+}
+#################################################################################
+
+[root@krosumlabs DAY4]# ansible all -m copy -a "src=/etc/sysconfig/network-scripts/ifcfg-enp0s3 dest=/tmp"
+[WARNING]: Platform linux on host student is using the discovered Python
+interpreter at /usr/bin/python, but future installation of another Python
+interpreter could change this. See https://docs.ansible.com/ansible/2.9/reference_a
+ppendices/interpreter_discovery.html for more information.
+student | CHANGED => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    },
+    "changed": true,
+    "checksum": "99dd725c2da2841d07435d30c53dba8463d56a91",
+    "dest": "/tmp/ifcfg-enp0s3",
+    "gid": 0,
+    "group": "root",
+    "md5sum": "baec6cc9a2de61b6b84e1abc031d7072",
+    "mode": "0644",
+    "owner": "root",
+    "secontext": "unconfined_u:object_r:admin_home_t:s0",
+    "size": 312,
+    "src": "/root/.ansible/tmp/ansible-tmp-1741325698.17-5956-189861803267657/source",
+    "state": "file",
+    "uid": 0
+}
+example | CHANGED => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python3"
+    },
+    "changed": true,
+    "checksum": "99dd725c2da2841d07435d30c53dba8463d56a91",
+    "dest": "/tmp/ifcfg-enp0s3",
+    "gid": 0,
+    "group": "root",
+    "md5sum": "baec6cc9a2de61b6b84e1abc031d7072",
+    "mode": "0644",
+    "owner": "root",
+    "size": 312,
+    "src": "/root/.ansible/tmp/ansible-tmp-1741325698.54-5955-57204307836536/source",
+    "state": "file",
+    "uid": 0
+}
+[root@krosumlabs DAY4]
+###########################################################################################
+To get list of available module
+
+ansible-doc --list
+###################################################################################
+YAML
+-----
+ |->content key: value //format
+
+ |-> 1. configuration file
+ |-> 2. ansible playbook 
+
+Key:<space>Value
+	   -----
+	    int float str bool //Single
+	    array (or) list 			}  - collection
+	    object(or) map (or) dict (or) hash  }  - collection
+	   -----------------------------------
+
+Key1: V1
+Key2: [V1,V2,V3] <== array
+  <or>
+Key2:
+- V1
+- V2
+- V3
+----------//array
+
+Key:
+-<space>Value1
+-<space>Value2
+
+Key3: {K1: V1,K2: V2,K3: V3} 
+        -----------------------//object <or> dict
+ <or>
+Key3:
+<><>K1:<>V1
+<><>K2:<>V2
+<><>K3:<>V3
+
+<> - 1space
+
+Key: [[D1,D2],{K1: V1,K2: V2}] 
+	
+ <or>
+
+Key:
+-  
+   - D1
+   - D2  
+- 
+  K1: V1
+  K2: V2
+--------------------------------------------------------------------------------
+Key:<space>Value
+-<space>Value
+----------------------------------------------------------------------------------
+ansible playbook
+- target section - remote Node detils
+- variable section
+- tasks section - ansible module 
+    |
+    |notify
+- handler section - secondary tasks
+
+- template section 
+
+filename.yml <or> yaml
+----------------------
+
+---
+- name: <name of your playbook>
+  hosts: <remoteNode> <or> GroupName <== from inventoryFile
+  tasks:
+  - name: <task1>
+    module:
+      key1: value
+      key2: value
+  - name: <task2>
+    module: key1=value key2=value
+  - name: <task3>
+    module: Key1=Value
+
+- name,hosts,tasks - pre-defined ansible keywords
+---------------------
+
+tasks: [ {name: task1,module1: {key1: v1,key2: v2}},
+	 {name: task2,module1: {key1: v1,key2: v2}},
+	 {},
+	 {} ]
+
+ansible task section is array of object/dict type
+|
+each array index - use single ansible module
+--------------------------------------------------------
+
+ansible all -m command -a "uptime" 
+ansible all -m shell -a "ps -e|wc -l"
+ansible all -m copy -a "src=file1 dest=/tmp/file2"
+ansible all -m yum -a "name=zsh state=installed"
+..	        
+|
+file: p1.yml
+---
+- name: sample playbook
+  hosts: all 
+  tasks:
+  - name: task1-execute uptime
+    command: uptime
+  - name: task2-total number of process count
+    shell: ps -e|wc -l
+  - name: task3 copy the source file
+    copy: src=file1 dest=/tmp/file2
+  - name: task4
+    copy
+      src: file1
+      dest: /tmp/file2
+  - name: task4 install a zsh 
+    yum: name=zsh state=installed
+
+###################################################
+
+---
+- name: this is playbook - target section
+  hosts: all
+  vars:
+    variable1: value	 - variable section
+    variable2: value
+  tasks:	<------------
+  - name: task1
+    module: params
+  - name: task2
+    module:
+      K1: V1			task section
+  - name: task3
+    module: params
+    notify: <notifyName>
+  - name: task4 
+    template: ....    <----- 
+    ------------------------------//template section
+  handlers:
+  - name: <notifyName>
+    module: params
+   ---------------------//handler section
+#####################################################################
+	
+
+[root@krosumlabs DAY4]# cat -n p1.yml
+     1  ---
+     2  - name: playbook-1
+     3    hosts: all
+     4    tasks:
+     5    - name: task1
+     6      command: uptime
+     7    - name: task2
+     8      copy: src=p1.conf dest=/tmp/p2.conf
+[root@krosumlabs DAY4]# ansible-playbook p1.yml --syntax-check
+
+playbook: p1.yml
+[root@krosumlabs DAY4]# ansible-playbook p1.yml
+
+PLAY [playbook-1] ******************************************************************
+
+TASK [Gathering Facts] *************************************************************
+[WARNING]: Platform linux on host student is using the discovered Python
+interpreter at /usr/bin/python, but future installation of another Python
+interpreter could change this. See https://docs.ansible.com/ansible/2.9/reference_a
+ppendices/interpreter_discovery.html for more information.
+ok: [student]
+ok: [example]
+
+TASK [task1] ***********************************************************************
+changed: [student]
+changed: [example]
+
+TASK [task2] ***********************************************************************
+changed: [student]
+changed: [example]
+
+PLAY RECAP *************************************************************************
+example                    : ok=3    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+student                    : ok=3    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+[root@krosumlabs DAY4]# ansible-playbook p1.yml
+
+PLAY [playbook-1] ******************************************************************
+
+TASK [Gathering Facts] *************************************************************
+[WARNING]: Platform linux on host student is using the discovered Python
+interpreter at /usr/bin/python, but future installation of another Python
+interpreter could change this. See https://docs.ansible.com/ansible/2.9/reference_a
+ppendices/interpreter_discovery.html for more information.
+ok: [student]
+ok: [example]
+
+TASK [task1] ***********************************************************************
+changed: [student]
+changed: [example]
+
+TASK [task2] ***********************************************************************
+ok: [student]
+ok: [example]
+
+PLAY RECAP *************************************************************************
+example                    : ok=3    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+student                    : ok=3    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+[root@krosumlabs DAY4]#
+
+	[ansible-playbook]------output---->-----[monitor]
+				|
+				debug <== module
+				 - msg: we can combine userdefinedMessage and 
+					namedvariable
+				 - var: <variableName>
+
+	
+
+[root@krosumlabs DAY4]# cat p2.yml
+---
+- name: debug module
+  hosts: localhost
+  vars:
+   myapp: Flask
+   myport: 5000
+  tasks:
+  - name: task1
+    debug: msg="welcome to ansible playbook exection"
+  - name: task2
+    debug:
+      msg: "This is another way to display"
+  - name: task3
+    debug: msg="Running app name is:{{myapp}} port number is:{{myport}}"
+  - name: task4
+    debug: var=myapp
+[root@krosumlabs DAY4]#
+==============================================================================
+To capture module execution result use register keyword
+register is not a module
+--------
+
+- module: params
+  register: userdefined_register_variable
+- name: display the result
+  debug: var=<userdefined_register_variable>
+
+
+[root@krosumlabs DAY4]# cat p3.yml
+---
+- name: execute uptime and display results
+  hosts: localhost
+  tasks:
+  - name: execute uptime - task1
+    command: uptime
+    register: result
+  - name: diplay results - task2
+    debug: var=result
+  - name: diplay results - task3
+    debug: var=result.stdout
+[root@krosumlabs DAY4]#
+
+
+[root@krosumlabs DAY4]# cat -n p8.yml
+     1  ---
+     2  - hosts: student
+     3    tasks:
+     4    - copy: src="p1.sh" dest="/tmp/" mode="0777"
+     5      notify: call
+     6    handlers:
+     7    - name: call
+     8      shell: /tmp/p1.sh >r1.log
+[root@krosumlabs DAY4]#
+[root@krosumlabs DAY4]#
+
+
+jinja2 template 
+----------------
+ |-> <html>..{{variable}}..</html>
+	    	
+
+webpage
+----------
+Current value: | <value> | 
+
+<h1><font color=green>Current value:{{value}}</font></h1>
+------------------------------------|________|--------------
+					|->dynamic value
+playbook
+-----------
+{{variable}}
+
+{%if <condition> %}
+
+{%endif%}
+
+{%for variable in <collection>%}
+   {{variable}}
+{% endfor %}
+
+----------------------------------------------
+when: <bool>
+
+yum : name="httpd" state="installed"
+when: <condition>
+----------------------------------------------
+##################################################################################
+ansible_facts - special variable
+ansible_ 
+
+ansible <node> -m setup 
+###################################################################################
+roles
+-----
+ |-> directory 
+	|-> <project>
+		|->list of yml files
+
+
+  [Actor]
+      |----->role1: 
+      |----->role2:
+
+ [m/c]
+    |---->role1: dev  -> s/w packages ->config ->service
+    |---->role2: test -> s/w packages ->tools ->report
+
+roles/ <== pre-defined directory
+    |
+    |__projectName/ <=== userdefined directory
+		|
+	        |___vars/ tasks/ handlers/ templates/ <== pre-defined directory
+
+- hosts: all
+  roles:
+  - <projectName>
+################################################################################
+resource "oci_compute" "oci" {
+	...
+
+  provisioner "local-exec" {
+	command = "ansible-playbook -i inventorFolder p1.yml"
+  }
+}
+
+
+copying the inputfile from TF m/c to remote m/c
+--------------------------------------------------
+  provisioner "file" {
+	source = "Inputfile"
+	destination = "targetm/c:Path"
+  }
+
+resource "oci_compute" "oci" {
+	...
+
+  provisioner "file-exec" {
+	source = "p1.yml"
+	destination = "/root/ansible_terraform/oci_instance/"
+  }
+  provisioner "remote-exec" {
+	inline = [
+	  ansible-playbook /root/ansible_terraform/oci_instance/p1.yml
+	]
+  }
+
+  provisioner "local-exec" {
+	command = "chrome http://${oci_instance_public.ip}/"
+  }
+}
+-----------------------------------------------------------
+resource "null_resource" "ansible-provisioner" {
+ provisioner "local-exec" {
+	command = "ansible-playbook -i inventorFolder p1.yml"
+ }
+}
+-----------------------------------------------------------
+TF + provisiners (configuration activity)
+-----------------------------------------------------------
+
+dynamic "blockName" {
+	for_each = <condition>
+	content {}
+}
+locals {
+   instance = { "env"  = "prod" }
+}
+resource "oci_core_instance" "logicalName" {
+
+ dynamic "mytags" {
+  for_each = local.instance
+   content {
+     key =  mytags.key
+     value =  mytags.value
+   }
+  }
+}
+locals {
+   d = {... }
+		 <== dict/hash type 
+}
+resource "oci_core_security_list" "rules" {
+  compartment_id = ..
+  
+  dynamic "myrule" {
+  for_each = local.d 		<= iterate 
+  content {			<= split key, value separate 
+    protocol = myrule.key 
+  }				//usecase use dynamic block
+ 
+ }  
+}
+
+jinjatemplate syntax:-
+-----------------------
+%{ for <ITEM> in <COLLECTION> }<BODY>%{ endfor }
+	|
+	|
+ {%for item in <collection>%}
+    {{item}}
+  {% endfor %}
+  
+
+ p1.tf --------> [ infra ] - ready
+			|___ modified - modified infra
+
+		 ----------//
+     |______________|
+p1.tf 
+    |--------->[create]
+.lock_hcl
+
+ [resource - 10.0.0.1] ->[resource - 10.0.0.2]
+			 --------//destroy --
+		|__ create  10.0.0.1 1st ----
+----------------------------------------------------------------------
+terraform backend - state file
+--------------------------------------
+create a bucket - unique bucket name
+|		  -----------------(A)
+|
+|
+
+terraform {
+  backend "s3" {
+	bucket = (A) <--
+	key=
+	value=
+  }
+}
+---------------
+terraform apply
+
+###############################################################################
